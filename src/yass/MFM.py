@@ -616,7 +616,7 @@ class ELBO_Class:
         #     np.matmul(np.matmul(muhat[k_ind, :, np.newaxis, :], Vhat[k_ind, :, :, :]), muhat[k_ind, :, :, np.newaxis]),
         #     axis=1, keepdims=False), axis=(1, 2))
         bmterm4 = - 0.5 * vbParam.nuhat[k_ind]*prior.lambda0*fterm1temp
-
+        
         bmterm5 = nchannel*(specsci.multigammaln(vbParam.nuhat[k_ind]/2.0, nfeature) -
                             specsci.multigammaln(prior.nu/2.0, nfeature) + 0.5 *
                             (prior.nu-vbParam.nuhat[k_ind])*mult_psi(vbParam.nuhat[k_ind, np.newaxis]/2.0, nfeature).ravel())
@@ -987,10 +987,26 @@ def spikesort(score, mask, group, param):
     for j in range(score.shape[0]):
         assignment[j] = assignmentTemp[group[j]]
         
-    idx_triage = cluster_triage(vbParam, score, 3)
+    idx_triage = cluster_triage(vbParam, score, 4)
     assignment[idx_triage] = -1
+    
+    # if there are too little members, triage out
+    K = np.max(assignment)
+    for k in range(K):
+        idx_k = assignment == k
+        if np.sum(idx_k) < 10:
+            assignment[idx_k] = -1
+            assignment[assignment > k]
+    
+    # re-assign cluster id (clean up empty assignment)
+    assignment_new = np.zeros(score.shape[0], 'int16')
+    K_unique = np.unique(assignment[assignment>-1])
+    for j in range(K_unique.shape[0]):
+        k = K_unique[j]
+        assignment_new[assignment==k] = j
+    
         
-    return assignment
+    return assignment_new
 
 
 def split_merge(maskedData, param):

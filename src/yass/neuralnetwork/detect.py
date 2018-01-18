@@ -14,7 +14,7 @@ def nn_detection(X, T_batch, buff, neighChannels, geom,
                nnd, nnt):
 
     T, C = X.shape
-    
+
     T_small = np.min((T_batch,T))
     nbatches = int(np.ceil(float(T)/T_small))
     if nbatches == 1:

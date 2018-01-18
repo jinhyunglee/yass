@@ -19,7 +19,7 @@ def get_score_pca(spike_index, rot, neighbors, geom, batch_size, BUFF, nBatches,
     wf_file = open(os.path.join(wf_path), 'rb')
     flattenedLength = 2*(batch_size + 2*BUFF)*n_channels
 
-    nneigh = np.max(np.sum(neighbors, 0))
+    nneigh = np.max(np.sum(neighbors, 1))
     c_idx = np.ones((n_channels, nneigh), 'int32')*n_channels
     for c in range(n_channels):
         ch_idx, _ = order_channels_by_distance(c,
@@ -28,7 +28,6 @@ def get_score_pca(spike_index, rot, neighbors, geom, batch_size, BUFF, nBatches,
         c_idx[c,:ch_idx.shape[0]] = ch_idx
 
     score = np.zeros((n_spikes, n_features, nneigh), 'float32')
-
     counter_batch = 0
     for i in range(nBatches):
         idx_batch = np.logical_and(spike_index[:,0] > batch_size*i, 
@@ -48,16 +47,17 @@ def get_score_pca(spike_index, rot, neighbors, geom, batch_size, BUFF, nBatches,
         nbuff = 50000
         wf = np.zeros((nbuff, window_size, nneigh), 'float32')
         count = 0
+        
         for j in range(n_spikes_batch):
             t = spike_index_batch[j,SPIKE_TIME]
             ch_idx = c_idx[spike_index_batch[j,MAIN_CHANNEL]]
             wf[count] = wrec[(t-spike_size):(t+spike_size+1),ch_idx]
             count += 1
 
-            if (count == nbuff) or (j == n_spikes_batch -1):
+            if (count == nbuff) or (j == n_spikes_batch - 1):
                 # if we seek all spikes before reaching the buffer size,
                 # size of buffer becomes the number of leftover spikes
-                if j == n_spikes-1:
+                if j == n_spikes_batch - 1:
                     nbuff = count
                     wf = wf[:nbuff]
 
@@ -66,6 +66,7 @@ def get_score_pca(spike_index, rot, neighbors, geom, batch_size, BUFF, nBatches,
                 for j in range(nneigh):
                     if ch_idx[j] < n_channels:
                         score_temp[:,:,j] = np.matmul(wf[:,:,j],rot[:,:,ch_idx[j]])
+                
                 score[counter_batch:(counter_batch+nbuff)] = score_temp
 
                 # set counter back to zero
